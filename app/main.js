@@ -4,8 +4,8 @@ const fs = require("fs")
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
 
-const generateResponse = (val, socket, contenType = 'text/plain') => {
-    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: ${contenType}\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
+const generateResponse = (val, socket, contentType = 'text/plain', statuMsg = '200 OK') => {
+    socket.write(`HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
     return;
 }
 
@@ -14,6 +14,7 @@ const server = net.createServer((socket) => {
     socket.on("data", (data) => {
         const request = data.toString().split("\r\n\r\n");
         const [requestLine, ...headers] = request[0].split('\r\n')
+        const requestBody = request[1]
         const [method, endpoint, httpVersion] = requestLine.split(' ')
         const params = endpoint.split('/');
         const headersObj = headers.reduce((obj, header) => {
@@ -21,6 +22,7 @@ const server = net.createServer((socket) => {
             obj[key.toLowerCase()] = value;
             return obj
         }, {});
+        console.log('requestBody', requestBody)
         if (endpoint === '/') {
             socket.write("HTTP/1.1 200 OK\r\n\r\n")
         } else {
@@ -36,14 +38,27 @@ const server = net.createServer((socket) => {
                     break;
                 }
                 case 'files': {
-                    try {
-                        const folder = process.argv[3]
-                        const fileName = params[params.length - 1];
-                        const fileContent = fs.readFileSync(`${folder}${fileName}`)
-                        generateResponse(fileContent, socket, 'application/octet-stream');
-                        break;
-                    } catch(err) {
-                        socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+                    switch (method.toLowerCase()) {
+                        case 'get': {
+                            try {
+                                const folder = process.argv[3]
+                                const fileName = params[params.length - 1];
+                                const fileContent = fs.readFileSync(`${folder}${fileName}`)
+                                generateResponse(fileContent, socket, 'application/octet-stream');
+                                break;
+                            } catch (err) {
+                                socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+                            }
+                            break;
+                        }
+                        case 'post': {
+                            const folder = process.argv[3]
+                            const fileName = params[params.length - 1];
+                            fs.mkdirSync(folder, { recursive: true })
+                            fs.writeFileSync(`${folder}${fileName}`, requestBody)
+                            generateResponse('', socket, 'application/octet-stream', '201 Created');
+                            break;
+                        }
                     }
                 }
                 default: {
