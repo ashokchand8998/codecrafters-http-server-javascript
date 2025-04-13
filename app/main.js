@@ -1,10 +1,11 @@
 const net = require("net");
+const fs = require("fs")
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
 
-const generateResponse = (val, socket) => {
-    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
+const generateResponse = (val, socket, contenType = 'text/plain') => {
+    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: ${contenType}\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
     return;
 }
 
@@ -26,11 +27,24 @@ const server = net.createServer((socket) => {
             switch (params[1]) {
                 case 'echo': {
                     const val = params[params.length - 1];
-                    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
+                    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`);
+                    break;
                 }
                 case 'user-agent': {
                     const userAgentValue = headersObj['user-agent'];
-                    generateResponse(userAgentValue, socket)
+                    generateResponse(userAgentValue, socket);
+                    break;
+                }
+                case 'files': {
+                    try {
+                        const fileName = params[params.length - 1];
+                        const fileContent = fs.readFileSync(`/tmp/${fileName}`)
+                        console.log(fileContent)
+                        generateResponse(fileContent, socket, 'application/octet-stream');
+                        break;
+                    } catch(err) {
+                        socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+                    }
                 }
                 default: {
                     socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
