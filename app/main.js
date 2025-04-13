@@ -10,14 +10,15 @@ const server = net.createServer((socket) => {
         const requestLine = request[0].split(' ')
         const target = requestLine[1]
         const params = target.split('/');
-        // if (target === '/') {
-        //     socket.write("HTTP/1.1 200 OK\r\n\r\n")
-        // } else {
-        //     socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
-        // }
-        const val = params[params.length - 1];
-        console.log(val)
-        socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
+        if (target === '/') {
+            socket.write("HTTP/1.1 200 OK\r\n\r\n")
+        } else if (params[1] === 'echo') {
+            const val = params[params.length - 1];
+            // console.log(val)
+            socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
+        } else {
+            socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+        }
         socket.emit("close");
     })
     socket.on("close", () => {
