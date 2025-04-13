@@ -37,9 +37,9 @@ const server = net.createServer((socket) => {
                 }
                 case 'files': {
                     try {
+                        const folder = process.argv[3]
                         const fileName = params[params.length - 1];
-                        const fileContent = fs.readFileSync(`/tmp/${fileName}`)
-                        console.log(fileContent)
+                        const fileContent = fs.readFileSync(`${folder}${fileName}`)
                         generateResponse(fileContent, socket, 'application/octet-stream');
                         break;
                     } catch(err) {
