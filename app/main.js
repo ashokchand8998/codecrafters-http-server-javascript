@@ -4,9 +4,11 @@ const fs = require("fs")
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
 
-const generateResponse = (val, socket, contentType = 'text/plain', statuMsg = '200 OK') => {
-    socket.write(`HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}\r\nContent-Length: ${val.length}\r\n\r\n${val}`)
-    return;
+const generateResponse = (val, contentType = 'text/plain', statuMsg = '200 OK') => {
+    return {
+        header: `HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}\r\nContent-Length: ${val.length}`,
+        body: `\r\n\r\n${val}`
+    }
 }
 
 // Uncomment this to pass the first stage
@@ -22,18 +24,29 @@ const server = net.createServer((socket) => {
             obj[key.toLowerCase()] = value;
             return obj
         }, {});
+        const closeConnection = headersObj["connection"] && headersObj["connection"].toLowerCase() === "close";
+        let response = {
+            header: "",
+            body: ""
+        }
         if (endpoint === '/') {
-            socket.write("HTTP/1.1 200 OK\r\n\r\n")
+            response = {
+                header: "HTTP/1.1 200 OK",
+                body: "\r\n\r\n"
+            }
         } else {
             switch (params[1]) {
                 case 'echo': {
                     const val = params[params.length - 1];
-                    socket.write(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}\r\n\r\n${val}`);
+                    response = {
+                        header: `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}`,
+                        body: `\r\n\r\n${val}`
+                    }
                     break;
                 }
                 case 'user-agent': {
                     const userAgentValue = headersObj['user-agent'];
-                    generateResponse(userAgentValue, socket);
+                    response = generateResponse(userAgentValue);
                     break;
                 }
                 case 'files': {
@@ -43,10 +56,13 @@ const server = net.createServer((socket) => {
                                 const folder = process.argv[3]
                                 const fileName = params[params.length - 1];
                                 const fileContent = fs.readFileSync(`${folder}${fileName}`)
-                                generateResponse(fileContent, socket, 'application/octet-stream');
+                                response = generateResponse(fileContent, 'application/octet-stream');
                                 break;
                             } catch (err) {
-                                socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+                                response = {
+                                    header: "HTTP/1.1 404 Not Found",
+                                    body: "\r\n\r\n"
+                                }
                             }
                             break;
                         }
@@ -55,19 +71,25 @@ const server = net.createServer((socket) => {
                             const fileName = params[params.length - 1];
                             fs.mkdirSync(folder, { recursive: true })
                             fs.writeFileSync(`${folder}${fileName}`, requestBody)
-                            generateResponse('', socket, 'application/octet-stream', '201 Created');
+                            response = generateResponse('', 'application/octet-stream', '201 Created');
                             break;
                         }
                     }
                 }
                 default: {
-                    socket.write("HTTP/1.1 404 Not Found\r\n\r\n")
+                    response = {
+                        header: "HTTP/1.1 404 Not Found",
+                        body: "\r\n\r\n"
+                    }
                 }
             }
         }
         // socket.emit("close");
-        if (headersObj["Connection"] && headers["Connection"].toLowerCase() === "close") {
-            socket.end();
+        if (closeConnection) {
+            socket.write(response.header + "\r\nConnection: close" + response.body)
+            socket.close();
+        } else {
+            socket.write(response.header + response.body)
         }
     })
     socket.on("close", () => {
