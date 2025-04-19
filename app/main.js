@@ -1,13 +1,14 @@
 const net = require("net");
 const fs = require("fs")
 
+const supportedEncodings = new Set(['gzip'])
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
 
 const generateResponse = (val, contentType = 'text/plain', statuMsg = '200 OK') => {
     return {
         header: `HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}\r\nContent-Length: ${val.length}`,
-        body: `\r\n\r\n${val}`
+        body: `${val}`
     }
 }
 
@@ -32,7 +33,7 @@ const server = net.createServer((socket) => {
         if (endpoint === '/') {
             response = {
                 header: "HTTP/1.1 200 OK",
-                body: "\r\n\r\n"
+                body: ""
             }
         } else {
             switch (params[1]) {
@@ -40,7 +41,7 @@ const server = net.createServer((socket) => {
                     const val = params[params.length - 1];
                     response = {
                         header: `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}`,
-                        body: `\r\n\r\n${val}`
+                        body: `${val}`
                     }
                     break;
                 }
@@ -61,7 +62,7 @@ const server = net.createServer((socket) => {
                             } catch (err) {
                                 response = {
                                     header: "HTTP/1.1 404 Not Found",
-                                    body: "\r\n\r\n"
+                                    body: ""
                                 }
                             }
                             break;
@@ -80,17 +81,24 @@ const server = net.createServer((socket) => {
                 default: {
                     response = {
                         header: "HTTP/1.1 404 Not Found",
-                        body: "\r\n\r\n"
+                        body: ""
                     }
                 }
             }
         }
+        if (headersObj['accept-encoding']) {
+            const requiredEncoding = headersObj['accept-encoding'];
+            if (supportedEncodings.has(requiredEncoding)) {
+                // preform encoding
+                response.header += `\r\nContent-Encoding: ${requiredEncoding}`
+            }
+        }
         // socket.emit("close");
         if (closeConnection) {
-            socket.write(response.header + "\r\nConnection: close" + response.body)
+            socket.write(response.header + "\r\nConnection: close" + "\r\n\r\n" + response.body)
             socket.emit("close");
         } else {
-            socket.write(response.header + response.body)
+            socket.write(response.header + "\r\n\r\n" + response.body)
         }
     })
     socket.on("close", () => {
