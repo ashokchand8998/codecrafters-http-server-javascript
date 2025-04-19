@@ -87,10 +87,11 @@ const server = net.createServer((socket) => {
             }
         }
         if (headersObj['accept-encoding']) {
-            const requiredEncoding = headersObj['accept-encoding'];
-            if (supportedEncodings.has(requiredEncoding)) {
+            const compatibleEncoding = headersObj['accept-encoding'].split(', ');
+            const availableEncoding = compatibleEncoding.find((encoding) => supportedEncodings.has(encoding))
+            if (availableEncoding) {
                 // preform encoding
-                response.header += `\r\nContent-Encoding: ${requiredEncoding}`
+                response.header += `\r\nContent-Encoding: ${availableEncoding}`
             }
         }
         // socket.emit("close");
