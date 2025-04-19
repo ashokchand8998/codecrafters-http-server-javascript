@@ -8,7 +8,7 @@ console.log("Logs from your program will appear here!");
 
 const generateResponse = (val, contentType = 'text/plain', statuMsg = '200 OK') => {
     return {
-        header: `HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}\r\nContent-Length: ${val.length}`,
+        header: `HTTP/1.1 ${statuMsg}\r\nContent-Type: ${contentType}`,
         body: `${val}`
     }
 }
@@ -41,7 +41,7 @@ const server = net.createServer((socket) => {
                 case 'echo': {
                     const val = params[params.length - 1];
                     response = {
-                        header: `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${val.length}`,
+                        header: `HTTP/1.1 200 OK\r\nContent-Type: text/plain`,
                         body: `${val}`
                     }
                     break;
@@ -97,7 +97,6 @@ const server = net.createServer((socket) => {
                     case 'gzip': {
                         const compressedBody = zlib.gzipSync(response.body);
                         response.body = compressedBody
-                        response.header += `\r\nContent-Length: ${response.body.length}`
                         break;
                     }
                 }
@@ -105,10 +104,12 @@ const server = net.createServer((socket) => {
         }
         // socket.emit("close");
         if (closeConnection) {
+            response.header += `\r\nContent-Length: ${response.body.length}`
             socket.write(response.header + "\r\nConnection: close" + "\r\n\r\n");
             socket.write(response.body)
             socket.emit("close");
         } else {
+            response.header += `\r\nContent-Length: ${response.body.length}`
             socket.write(response.header + "\r\n\r\n");
             socket.write(response.body)
         }
