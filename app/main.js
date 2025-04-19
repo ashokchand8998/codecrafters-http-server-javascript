@@ -75,6 +75,7 @@ const server = net.createServer((socket) => {
                             break;
                         }
                     }
+                    break;
                 }
                 default: {
                     response = {
@@ -87,7 +88,7 @@ const server = net.createServer((socket) => {
         // socket.emit("close");
         if (closeConnection) {
             socket.write(response.header + "\r\nConnection: close" + response.body)
-            socket.close();
+            socket.emit("close");
         } else {
             socket.write(response.header + response.body)
         }
