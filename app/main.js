@@ -22,7 +22,6 @@ const server = net.createServer((socket) => {
             obj[key.toLowerCase()] = value;
             return obj
         }, {});
-        console.log('requestBody', requestBody)
         if (endpoint === '/') {
             socket.write("HTTP/1.1 200 OK\r\n\r\n")
         } else {
@@ -66,7 +65,7 @@ const server = net.createServer((socket) => {
                 }
             }
         }
-        socket.emit("close");
+        // socket.emit("close");
     })
     socket.on("close", () => {
         socket.end();
