@@ -66,6 +66,9 @@ const server = net.createServer((socket) => {
             }
         }
         // socket.emit("close");
+        if (headersObj["Connection"] && headers["Connection"].toLowerCase() === "close") {
+            socket.end();
+        }
     })
     socket.on("close", () => {
         socket.end();
